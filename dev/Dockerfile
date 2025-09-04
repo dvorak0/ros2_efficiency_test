@@ -1,4 +1,4 @@
-FROM uniflexai/base_image:latest
+FROM ubuntu:22.04
 
 ARG USER_UID=1000
 ARG USER_GID=1000
@@ -53,7 +53,10 @@ RUN apt-get update && apt-get install -y software-properties-common \
 RUN add-apt-repository universe
 RUN curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
 RUN echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | tee /etc/apt/sources.list.d/ros2.list > /dev/null
-RUN apt-get update && apt-get install -y ros-humble-desktop \
+RUN apt-get update && apt-get install -y \
+    ros-humble-ros-base \
+    ros-humble-rmw-cyclonedds-cpp \
+    ros-humble-cv-bridge \
     python3-colcon-common-extensions \
     && rm -rf /var/lib/apt/lists/*
 
