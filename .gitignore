@@ -1,0 +1,27 @@
+# ROS 2 colcon build artifacts
+build/
+install/
+log/
+
+# Python cache files
+__pycache__/
+*.pyc
+*.pyo
+
+# CMake intermediate files (if any sneak in)
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+*.cmake
+
+# Colcon metadata
+.colcon/
+
+# VSCode or IDE configs (optional, add/remove as you prefer)
+.vscode/
+.idea/
+
+# macOS / Linux junk
+.DS_Store
+Thumbs.db
+
