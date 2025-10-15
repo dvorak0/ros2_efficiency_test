@@ -1,0 +1,3 @@
+[submodule "ros2_ws/src/ros2_shm_msgs"]
+	path = ros2_ws/src/ros2_shm_msgs
+	url = https://github.com/ZhenshengLee/ros2_shm_msgs.git
