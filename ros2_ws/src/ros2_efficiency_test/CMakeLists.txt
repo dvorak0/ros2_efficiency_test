@@ -27,8 +27,19 @@ find_package(message_filters REQUIRED)
 find_package(cv_bridge REQUIRED)
 find_package(OpenCV REQUIRED)
 
+find_package(shm_msgs REQUIRED)
+
 add_executable(camera_node src/camera_node.cpp)
 ament_target_dependencies(camera_node rclcpp sensor_msgs)
+
+add_executable(shm_camera_node src/shm_camera_node.cpp)
+ament_target_dependencies(shm_camera_node rclcpp sensor_msgs shm_msgs)
+
+add_executable(shm_perception_node src/shm_perception_node.cpp)
+ament_target_dependencies(shm_perception_node rclcpp sensor_msgs nav_msgs message_filters shm_msgs)
+
+add_executable(shm_planning_node src/shm_planning_node.cpp)
+ament_target_dependencies(shm_planning_node rclcpp nav_msgs sensor_msgs message_filters shm_msgs)
 
 add_executable(imu_node src/imu_node.cpp)
 ament_target_dependencies(imu_node rclcpp sensor_msgs)
@@ -57,6 +68,9 @@ install(TARGETS
   perception_node
   planning_node
   control_node
+  shm_camera_node
+  shm_perception_node
+  shm_planning_node
   giant_nodes_system_v1
   giant_nodes_system_v2
   giant_nodes_system_v3
