@@ -1,3 +1,5 @@
+#include <cmath>
+
 #include <message_filters/subscriber.h>
 #include <message_filters/time_synchronizer.h>
 #include <nav_msgs/msg/odometry.hpp>
@@ -42,10 +44,20 @@ private:
     disparity_msg.header.frame_id = "disparity_frame";
     disparity_msg.height = 720;
     disparity_msg.width = 1280;
-    disparity_msg.encoding = "mono8";
+    disparity_msg.encoding = "32FC1";
     disparity_msg.is_bigendian = false;
-    disparity_msg.step = 1280;
-    disparity_msg.data.resize(1280 * 720, 64);
+    disparity_msg.step = disparity_msg.width * sizeof(float);
+    disparity_msg.data.resize(disparity_msg.step * disparity_msg.height);
+
+    constexpr float kTwoPi = 6.28318530717958647692f;
+    auto *disparity_ptr = reinterpret_cast<float *>(disparity_msg.data.data());
+    for (uint32_t v = 0; v < disparity_msg.height; ++v) {
+      for (uint32_t u = 0; u < disparity_msg.width; ++u) {
+        const float x = static_cast<float>(u) / static_cast<float>(disparity_msg.width) * kTwoPi;
+        disparity_ptr[v * disparity_msg.width + u] = 1.0f + std::sin(x);
+      }
+    }
+
     disparity_pub_->publish(disparity_msg);
 
     auto camera_info_msg = sensor_msgs::msg::CameraInfo();
