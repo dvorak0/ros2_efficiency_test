@@ -52,9 +52,11 @@ private:
     constexpr float kTwoPi = 6.28318530717958647692f;
     auto *disparity_ptr = reinterpret_cast<float *>(disparity_msg.data.data());
     for (uint32_t v = 0; v < disparity_msg.height; ++v) {
+      const float y = static_cast<float>(v) / static_cast<float>(disparity_msg.height) * kTwoPi;
       for (uint32_t u = 0; u < disparity_msg.width; ++u) {
         const float x = static_cast<float>(u) / static_cast<float>(disparity_msg.width) * kTwoPi;
-        disparity_ptr[v * disparity_msg.width + u] = 1.0f + std::sin(x);
+        disparity_ptr[v * disparity_msg.width + u] =
+            1.5f + 0.5f * std::sin(x) + 0.25f * std::sin(y);
       }
     }
 
