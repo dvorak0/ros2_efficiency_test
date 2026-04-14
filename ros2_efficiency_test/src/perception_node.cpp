@@ -67,14 +67,24 @@ private:
     camera_info_msg.width = disparity_msg.width;
     camera_info_msg.distortion_model = "plumb_bob";
     camera_info_msg.d = {0.0, 0.0, 0.0, 0.0, 0.0};
-    camera_info_msg.k = {1.0, 0.0, static_cast<double>(disparity_msg.width) / 2.0,
-                         0.0, 1.0, static_cast<double>(disparity_msg.height) / 2.0,
+
+    constexpr double kHorizontalFovDeg = 90.0;
+    constexpr double kPi = 3.14159265358979323846;
+    const double horizontal_fov_rad = kHorizontalFovDeg / 180.0 * kPi;
+    const double fx = static_cast<double>(disparity_msg.width) /
+                      (2.0 * std::tan(horizontal_fov_rad / 2.0));
+    const double fy = fx;
+    const double cx = (static_cast<double>(disparity_msg.width) - 1.0) / 2.0;
+    const double cy = (static_cast<double>(disparity_msg.height) - 1.0) / 2.0;
+
+    camera_info_msg.k = {fx, 0.0, cx,
+                         0.0, fy, cy,
                          0.0, 0.0, 1.0};
     camera_info_msg.r = {1.0, 0.0, 0.0,
                          0.0, 1.0, 0.0,
                          0.0, 0.0, 1.0};
-    camera_info_msg.p = {1.0, 0.0, static_cast<double>(disparity_msg.width) / 2.0, 0.0,
-                         0.0, 1.0, static_cast<double>(disparity_msg.height) / 2.0, 0.0,
+    camera_info_msg.p = {fx, 0.0, cx, 0.0,
+                         0.0, fy, cy, 0.0,
                          0.0, 0.0, 1.0, 0.0};
     camera_info_pub_->publish(camera_info_msg);
 
