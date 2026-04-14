@@ -37,6 +37,8 @@ public:
         "disparity/camera_info", 10);
     pointcloud_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
         "pointcloud", 10);
+    pointcloud_shifted_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
+        "pointcloud_shifted", 10);
   }
 
 private:
@@ -136,6 +138,19 @@ private:
     }
     pointcloud_pub_->publish(pointcloud_msg);
 
+    auto pointcloud_shifted_msg = pointcloud_msg;
+    pointcloud_shifted_msg.header.frame_id = "disparity_frame_shifted";
+    for (uint32_t point_index = 0; point_index < pointcloud_shifted_msg.width; ++point_index) {
+      float shifted_z;
+      std::memcpy(&shifted_z,
+                  pointcloud_shifted_msg.data.data() + point_index * pointcloud_shifted_msg.point_step + 8,
+                  sizeof(float));
+      shifted_z += 5.0f;
+      std::memcpy(pointcloud_shifted_msg.data.data() + point_index * pointcloud_shifted_msg.point_step + 8,
+                  &shifted_z, sizeof(float));
+    }
+    pointcloud_shifted_pub_->publish(pointcloud_shifted_msg);
+
     auto odom_msg = nav_msgs::msg::Odometry();
     odom_msg.header.stamp = left_msg->header.stamp;
     odom_msg.header.frame_id = "odom";
@@ -176,6 +191,7 @@ private:
   rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr disparity_pub_;
   rclcpp::Publisher<sensor_msgs::msg::CameraInfo>::SharedPtr camera_info_pub_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pointcloud_pub_;
+  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pointcloud_shifted_pub_;
 };
 
 int main(int argc, char *argv[]) {
