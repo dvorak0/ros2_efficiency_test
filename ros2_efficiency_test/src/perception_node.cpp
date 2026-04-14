@@ -2,6 +2,7 @@
 #include <message_filters/time_synchronizer.h>
 #include <nav_msgs/msg/odometry.hpp>
 #include <rclcpp/rclcpp.hpp>
+#include <sensor_msgs/msg/camera_info.hpp>
 #include <sensor_msgs/msg/image.hpp>
 #include <sensor_msgs/msg/imu.hpp>
 
@@ -26,6 +27,8 @@ public:
         "odometry/rate_200hz", 10);
     disparity_pub_ =
         this->create_publisher<sensor_msgs::msg::Image>("disparity", 10);
+    camera_info_pub_ = this->create_publisher<sensor_msgs::msg::CameraInfo>(
+        "disparity/camera_info", 10);
   }
 
 private:
@@ -44,6 +47,24 @@ private:
     disparity_msg.step = 1280;
     disparity_msg.data.resize(1280 * 720, 64);
     disparity_pub_->publish(disparity_msg);
+
+    auto camera_info_msg = sensor_msgs::msg::CameraInfo();
+    camera_info_msg.header.stamp = left_msg->header.stamp;
+    camera_info_msg.header.frame_id = "disparity_frame";
+    camera_info_msg.height = disparity_msg.height;
+    camera_info_msg.width = disparity_msg.width;
+    camera_info_msg.distortion_model = "plumb_bob";
+    camera_info_msg.d = {0.0, 0.0, 0.0, 0.0, 0.0};
+    camera_info_msg.k = {1.0, 0.0, static_cast<double>(disparity_msg.width) / 2.0,
+                         0.0, 1.0, static_cast<double>(disparity_msg.height) / 2.0,
+                         0.0, 0.0, 1.0};
+    camera_info_msg.r = {1.0, 0.0, 0.0,
+                         0.0, 1.0, 0.0,
+                         0.0, 0.0, 1.0};
+    camera_info_msg.p = {1.0, 0.0, static_cast<double>(disparity_msg.width) / 2.0, 0.0,
+                         0.0, 1.0, static_cast<double>(disparity_msg.height) / 2.0, 0.0,
+                         0.0, 0.0, 1.0, 0.0};
+    camera_info_pub_->publish(camera_info_msg);
 
     auto odom_msg = nav_msgs::msg::Odometry();
     odom_msg.header.stamp = left_msg->header.stamp;
@@ -83,6 +104,7 @@ private:
   rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odom_20hz_pub_;
   rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odom_200hz_pub_;
   rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr disparity_pub_;
+  rclcpp::Publisher<sensor_msgs::msg::CameraInfo>::SharedPtr camera_info_pub_;
 };
 
 int main(int argc, char *argv[]) {
