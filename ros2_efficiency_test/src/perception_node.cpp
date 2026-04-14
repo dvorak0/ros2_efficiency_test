@@ -139,7 +139,6 @@ private:
     pointcloud_pub_->publish(pointcloud_msg);
 
     auto pointcloud_shifted_msg = pointcloud_msg;
-    pointcloud_shifted_msg.header.frame_id = "disparity_frame_shifted";
     for (uint32_t point_index = 0; point_index < pointcloud_shifted_msg.width; ++point_index) {
       float shifted_z;
       std::memcpy(&shifted_z,
