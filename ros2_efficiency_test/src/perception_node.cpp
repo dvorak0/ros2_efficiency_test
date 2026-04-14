@@ -1,4 +1,6 @@
 #include <cmath>
+#include <cstdint>
+#include <cstring>
 
 #include <message_filters/subscriber.h>
 #include <message_filters/time_synchronizer.h>
@@ -7,6 +9,8 @@
 #include <sensor_msgs/msg/camera_info.hpp>
 #include <sensor_msgs/msg/image.hpp>
 #include <sensor_msgs/msg/imu.hpp>
+#include <sensor_msgs/msg/point_cloud2.hpp>
+#include <sensor_msgs/msg/point_field.hpp>
 
 class PerceptionNode : public rclcpp::Node {
 public:
@@ -31,6 +35,8 @@ public:
         this->create_publisher<sensor_msgs::msg::Image>("disparity", 10);
     camera_info_pub_ = this->create_publisher<sensor_msgs::msg::CameraInfo>(
         "disparity/camera_info", 10);
+    pointcloud_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
+        "pointcloud", 10);
   }
 
 private:
@@ -90,6 +96,46 @@ private:
                          0.0, 0.0, 1.0, 0.0};
     camera_info_pub_->publish(camera_info_msg);
 
+    auto pointcloud_msg = sensor_msgs::msg::PointCloud2();
+    pointcloud_msg.header.stamp = left_msg->header.stamp;
+    pointcloud_msg.header.frame_id = "disparity_frame";
+    pointcloud_msg.height = 1;
+    pointcloud_msg.width = disparity_msg.width * disparity_msg.height;
+    pointcloud_msg.is_bigendian = false;
+    pointcloud_msg.is_dense = true;
+    pointcloud_msg.fields.resize(3);
+    pointcloud_msg.fields[0].name = "x";
+    pointcloud_msg.fields[0].offset = 0;
+    pointcloud_msg.fields[0].datatype = sensor_msgs::msg::PointField::FLOAT32;
+    pointcloud_msg.fields[0].count = 1;
+    pointcloud_msg.fields[1].name = "y";
+    pointcloud_msg.fields[1].offset = 4;
+    pointcloud_msg.fields[1].datatype = sensor_msgs::msg::PointField::FLOAT32;
+    pointcloud_msg.fields[1].count = 1;
+    pointcloud_msg.fields[2].name = "z";
+    pointcloud_msg.fields[2].offset = 8;
+    pointcloud_msg.fields[2].datatype = sensor_msgs::msg::PointField::FLOAT32;
+    pointcloud_msg.fields[2].count = 1;
+    pointcloud_msg.point_step = 3 * sizeof(float);
+    pointcloud_msg.row_step = pointcloud_msg.width * pointcloud_msg.point_step;
+    pointcloud_msg.data.resize(pointcloud_msg.row_step * pointcloud_msg.height);
+
+    for (uint32_t v = 0; v < disparity_msg.height; ++v) {
+      for (uint32_t u = 0; u < disparity_msg.width; ++u) {
+        const size_t point_index = static_cast<size_t>(v) * disparity_msg.width + u;
+        const float z = disparity_ptr[point_index];
+        const float x = static_cast<float>((static_cast<double>(u) - cx) / fx * z);
+        const float y = static_cast<float>((static_cast<double>(v) - cy) / fy * z);
+        std::memcpy(pointcloud_msg.data.data() + point_index * pointcloud_msg.point_step + 0,
+                    &x, sizeof(float));
+        std::memcpy(pointcloud_msg.data.data() + point_index * pointcloud_msg.point_step + 4,
+                    &y, sizeof(float));
+        std::memcpy(pointcloud_msg.data.data() + point_index * pointcloud_msg.point_step + 8,
+                    &z, sizeof(float));
+      }
+    }
+    pointcloud_pub_->publish(pointcloud_msg);
+
     auto odom_msg = nav_msgs::msg::Odometry();
     odom_msg.header.stamp = left_msg->header.stamp;
     odom_msg.header.frame_id = "odom";
@@ -129,6 +175,7 @@ private:
   rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odom_200hz_pub_;
   rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr disparity_pub_;
   rclcpp::Publisher<sensor_msgs::msg::CameraInfo>::SharedPtr camera_info_pub_;
+  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pointcloud_pub_;
 };
 
 int main(int argc, char *argv[]) {
