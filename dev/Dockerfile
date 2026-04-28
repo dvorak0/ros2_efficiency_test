@@ -5,12 +5,20 @@ ARG USER_GID=1000
 ARG VIDEO_GID=44
 ARG USER_NAME=dev
 ARG DIR_NAME=project
-ENV DEBIAN_FRONTEND=noninteractive
+ENV DEBIAN_FRONTEND=noninteractive \
+    LANG=en_US.UTF-8 \
+    WS=/ros2_ws \
+    ROS_DISTRO=humble
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     sudo build-essential cmake git git-lfs openssh-client \
     nano vim less tree htop tmux curl wget zip unzip \
     libglib2.0-0 libgl1-mesa-glx libegl1-mesa \
+    locales gnupg2 lsb-release ca-certificates software-properties-common \
+    python3-pip linux-tools-common linux-tools-generic procps \
+ && locale-gen en_US en_US.UTF-8 \
+ && update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8 \
+ && add-apt-repository universe \
  && rm -rf /var/lib/apt/lists/*
 
 # --- create the user (handle primary group GID collisions) ---
@@ -57,12 +65,39 @@ RUN apt-get update && apt-get install -y \
     ros-humble-ros-base \
     ros-humble-rmw-cyclonedds-cpp \
     ros-humble-cv-bridge \
+    ros-humble-fastrtps \
+    ros-humble-fastrtps-cmake-module \
+    ros-humble-iceoryx-posh \
+    ros-humble-iceoryx-binding-c \
+    ros-humble-iceoryx-hoofs \
     python3-colcon-common-extensions \
+    python3-rosdep \
+    && rosdep init \
     && rm -rf /var/lib/apt/lists/*
 
-USER ${USER_NAME}
+RUN PERF_BIN="$(ls /usr/lib/linux-tools/*/perf 2>/dev/null | head -n 1)"; \
+    if [ -n "${PERF_BIN}" ]; then ln -sf "${PERF_BIN}" /usr/local/bin/perf; \
+    else echo "WARN: no perf binary found under /usr/lib/linux-tools" >&2; fi
 
 # WORKDIR is the same as the project folder name
-WORKDIR /${DIR_NAME}
+WORKDIR ${WS}
+
+COPY ros2_ws/src ./src
+
+RUN apt-get update \
+ && rosdep update --rosdistro=${ROS_DISTRO} \
+ && rosdep install --from-paths src --ignore-src -r -y --rosdistro=${ROS_DISTRO} \
+ && rm -rf /var/lib/apt/lists/*
 
 RUN echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+
+RUN /bin/bash -c "source /opt/ros/${ROS_DISTRO}/setup.bash \
+                  && colcon build \
+                       --cmake-args -DCMAKE_BUILD_TYPE=Release"
+
+# Drop in the runner script.
+COPY ../entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+USER ${USER_NAME}
