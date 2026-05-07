@@ -18,11 +18,16 @@ USER_NAME="$(id -un)"
 echo "Building ${IMAGE_NAME} with:"
 echo "  USER_UID=${USER_UID} USER_GID=${USER_GID} VIDEO_GID=${VIDEO_GID} USER_NAME=${USER_NAME} DIR_NAME=${DIR_NAME_RAW}"
 
+if [ -f "${PROJECT_DIR}/.gitmodules" ]; then
+  echo "Updating git submodules for Docker build context ..."
+  git -C "${PROJECT_DIR}" submodule update --init --recursive
+fi
+
 docker build -t "${IMAGE_NAME}" \
   --build-arg USER_UID="${USER_UID}" \
   --build-arg USER_GID="${USER_GID}" \
   --build-arg VIDEO_GID="${VIDEO_GID}" \
   --build-arg USER_NAME="${USER_NAME}" \
   --build-arg DIR_NAME="${DIR_NAME_RAW}" \
-  -f "${DOCKERFILE}" "${SCRIPT_DIR}"
+  -f "${DOCKERFILE}" "${PROJECT_DIR}"
 

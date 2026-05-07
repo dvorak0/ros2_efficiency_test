@@ -2,7 +2,7 @@
 # Drive the C++ and Python ROS 2 efficiency-test launches and capture
 # `perf stat` for each node, then print a single summary table of CPU
 # utilization (% of one CPU). Designed to run inside the companion
-# Docker image, but works on any host with ROS 2 Humble + perf.
+# Docker image, but works on any host with ROS 2 Jazzy + perf.
 
 export LC_ALL=C
 
@@ -11,7 +11,7 @@ PERF_DURATION="${PERF_DURATION:-10}"
 SPINUP_WAIT="${SPINUP_WAIT:-8}"
 NODES=(perception_node camera_node imu_node planning_node control_node)
 
-source /opt/ros/humble/setup.bash
+source /opt/ros/${ROS_DISTRO:-jazzy}/setup.bash
 # shellcheck disable=SC1091
 source "${WS}/install/setup.bash"
 

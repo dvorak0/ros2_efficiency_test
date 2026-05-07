@@ -1,4 +1,4 @@
-FROM ubuntu:22.04
+FROM ubuntu:24.04
 
 ARG USER_UID=1000
 ARG USER_GID=1000
@@ -8,12 +8,12 @@ ARG DIR_NAME=project
 ENV DEBIAN_FRONTEND=noninteractive \
     LANG=en_US.UTF-8 \
     WS=/ros2_ws \
-    ROS_DISTRO=humble
+    ROS_DISTRO=jazzy
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     sudo build-essential cmake git git-lfs openssh-client \
     nano vim less tree htop tmux curl wget zip unzip \
-    libglib2.0-0 libgl1-mesa-glx libegl1-mesa \
+    libglib2.0-0 libgl1 libegl1 \
     locales gnupg2 lsb-release ca-certificates software-properties-common \
     python3-pip linux-tools-common linux-tools-generic procps \
  && locale-gen en_US en_US.UTF-8 \
@@ -24,14 +24,23 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # --- create the user (handle primary group GID collisions) ---
 RUN set -eux; \
   PRIMARY_GID="${USER_GID}"; \
-  PRIMARY_G="$(getent group "${PRIMARY_GID}" | cut -d: -f1 || true)"; \
-  if [ -n "${PRIMARY_G}" ]; then \
-    echo "Using existing group ${PRIMARY_G} (GID ${PRIMARY_GID}) for ${USER_NAME}"; \
-    useradd -m -u "${USER_UID}" -g "${PRIMARY_GID}" -G sudo -s /bin/bash "${USER_NAME}"; \
+  EXISTING_USER="$(getent passwd "${USER_UID}" | cut -d: -f1 || true)"; \
+  if [ -n "${EXISTING_USER}" ]; then \
+    echo "UID ${USER_UID} already used by user: ${EXISTING_USER}; reusing it as ${USER_NAME}."; \
+    if [ "${EXISTING_USER}" != "${USER_NAME}" ]; then \
+      usermod -l "${USER_NAME}" -d "/home/${USER_NAME}" -m "${EXISTING_USER}"; \
+    fi; \
+    usermod -aG sudo "${USER_NAME}"; \
   else \
-    echo "Creating group ${USER_NAME} with GID ${PRIMARY_GID}"; \
-    groupadd -g "${PRIMARY_GID}" "${USER_NAME}"; \
-    useradd -m -u "${USER_UID}" -g "${PRIMARY_GID}" -G sudo -s /bin/bash "${USER_NAME}"; \
+    PRIMARY_G="$(getent group "${PRIMARY_GID}" | cut -d: -f1 || true)"; \
+    if [ -n "${PRIMARY_G}" ]; then \
+      echo "Using existing group ${PRIMARY_G} (GID ${PRIMARY_GID}) for ${USER_NAME}"; \
+      useradd -m -u "${USER_UID}" -g "${PRIMARY_GID}" -G sudo -s /bin/bash "${USER_NAME}"; \
+    else \
+      echo "Creating group ${USER_NAME} with GID ${PRIMARY_GID}"; \
+      groupadd -g "${PRIMARY_GID}" "${USER_NAME}"; \
+      useradd -m -u "${USER_UID}" -g "${PRIMARY_GID}" -G sudo -s /bin/bash "${USER_NAME}"; \
+    fi; \
   fi; \
   echo "%sudo ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/nopasswd; \
   chmod 0440 /etc/sudoers.d/nopasswd
@@ -62,18 +71,20 @@ RUN add-apt-repository universe
 RUN curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
 RUN echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | tee /etc/apt/sources.list.d/ros2.list > /dev/null
 RUN apt-get update && apt-get install -y \
-    ros-humble-ros-base \
-    ros-humble-rmw-cyclonedds-cpp \
-    ros-humble-cv-bridge \
-    ros-humble-fastrtps \
-    ros-humble-fastrtps-cmake-module \
-    ros-humble-iceoryx-posh \
-    ros-humble-iceoryx-binding-c \
-    ros-humble-iceoryx-hoofs \
+    ros-${ROS_DISTRO}-ros-base \
+    ros-${ROS_DISTRO}-rmw-cyclonedds-cpp \
+    ros-${ROS_DISTRO}-cv-bridge \
+    ros-${ROS_DISTRO}-rmw-fastrtps-cpp \
+    ros-${ROS_DISTRO}-iceoryx-posh \
+    ros-${ROS_DISTRO}-iceoryx-binding-c \
+    ros-${ROS_DISTRO}-iceoryx-hoofs \
+    ros-${ROS_DISTRO}-pcl-conversions \
     python3-colcon-common-extensions \
+    ros-${ROS_DISTRO}-ament-cmake-target-dependencies \
     python3-rosdep \
-    && rosdep init \
     && rm -rf /var/lib/apt/lists/*
+
+RUN rosdep init
 
 RUN PERF_BIN="$(ls /usr/lib/linux-tools/*/perf 2>/dev/null | head -n 1)"; \
     if [ -n "${PERF_BIN}" ]; then ln -sf "${PERF_BIN}" /usr/local/bin/perf; \
@@ -93,10 +104,11 @@ RUN echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
 
 RUN /bin/bash -c "source /opt/ros/${ROS_DISTRO}/setup.bash \
                   && colcon build \
+                       --packages-select shm_msgs ros2_efficiency_test ros2_efficiency_test_py \
                        --cmake-args -DCMAKE_BUILD_TYPE=Release"
 
 # Drop in the runner script.
-COPY ../entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

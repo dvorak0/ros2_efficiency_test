@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import rclpy
+from rclpy.experimental.events_executor import EventsExecutor
 from rclpy.node import Node
 from sensor_msgs.msg import Image
 
@@ -40,9 +41,15 @@ class CameraNode(Node):
 def main(args=None):
     rclpy.init(args=args)
     node = CameraNode()
-    rclpy.spin(node)
-    node.destroy_node()
-    rclpy.shutdown()
+    executor = EventsExecutor()
+    executor.add_node(node)
+
+    try:
+        executor.spin()
+    finally:
+        executor.shutdown()
+        node.destroy_node()
+        rclpy.shutdown()
 
 
 if __name__ == '__main__':

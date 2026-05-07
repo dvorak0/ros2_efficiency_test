@@ -57,7 +57,7 @@ The project provides two architectural approaches:
 
 ```bash
 # Source ROS2
-source /opt/ros/humble/setup.bash
+source /opt/ros/jazzy/setup.bash
 
 # Create workspace if needed
 mkdir -p ~/ros2_ws/src
@@ -68,7 +68,7 @@ cd ~/ros2_ws/src
 
 # Build the package
 cd ~/ros2_ws
-colcon build --packages-select ros2_efficiency_test
+colcon build --packages-select shm_msgs ros2_efficiency_test ros2_efficiency_test_py
 
 # Source the workspace
 source install/setup.bash
@@ -87,6 +87,19 @@ ros2 run ros2_efficiency_test imu_node
 ros2 run ros2_efficiency_test perception_node
 ros2 run ros2_efficiency_test planning_node
 ros2 run ros2_efficiency_test control_node
+```
+
+### Run Python EventsExecutor Distributed System
+```bash
+# Launch all Python nodes using rclpy EventsExecutor
+ros2 launch ros2_efficiency_test_py efficiency_test_py.launch.py
+
+# Run individual Python nodes
+ros2 run ros2_efficiency_test_py camera_node
+ros2 run ros2_efficiency_test_py imu_node
+ros2 run ros2_efficiency_test_py perception_node
+ros2 run ros2_efficiency_test_py planning_node
+ros2 run ros2_efficiency_test_py control_node
 ```
 
 ### Run Experimental Variants
@@ -185,7 +198,7 @@ ros2_efficiency_test/
 
 ## Dependencies
 
-- **ROS2 Humble** or later
+- **ROS2 Jazzy** or later
 - **rclcpp**: ROS2 C++ client library
 - **sensor_msgs**: Sensor message definitions
 - **nav_msgs**: Navigation message definitions
