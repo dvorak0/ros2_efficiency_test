@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+import os
+
 import rclpy
 from rclpy.experimental.events_executor import EventsExecutor
 from rclpy.node import Node
@@ -23,6 +25,7 @@ class PerceptionNode(Node):
         self.odom_20hz_pub_ = self.create_publisher(Odometry, 'odometry/rate_20hz', 10)
         self.odom_200hz_pub_ = self.create_publisher(Odometry, 'odometry/rate_200hz', 10)
         self.disparity_pub_ = self.create_publisher(Image, 'disparity', 10)
+        self.disparity_payload = bytes([64]) * (1280 * 720)
 
     def stereo_callback(self, left_msg, right_msg):
         disparity_msg = Image()
@@ -33,7 +36,7 @@ class PerceptionNode(Node):
         disparity_msg.encoding = 'mono8'
         disparity_msg.is_bigendian = False
         disparity_msg.step = 1280
-        disparity_msg.data = bytes([64] * (1280 * 720))
+        disparity_msg.data = self.disparity_payload
         self.disparity_pub_.publish(disparity_msg)
 
         odom_msg = Odometry()
@@ -63,16 +66,21 @@ class PerceptionNode(Node):
 def main(args=None):
     rclpy.init(args=args)
     node = PerceptionNode()
-    executor = EventsExecutor()
-    executor.add_node(node)
+    executor = None
 
     try:
-        executor.spin()
+        if os.environ.get('EVENT_EXECUTOR') == '1':
+            executor = EventsExecutor()
+            executor.add_node(node)
+            executor.spin()
+        else:
+            rclpy.spin(node)
     finally:
-        executor.shutdown()
+        if executor is not None:
+            executor.shutdown()
         node.destroy_node()
-        rclpy.shutdown()
-
+        if rclpy.ok():
+            rclpy.shutdown()
 
 if __name__ == '__main__':
     main()

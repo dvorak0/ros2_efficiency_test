@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+import os
+
 import rclpy
 from rclpy.experimental.events_executor import EventsExecutor
 from rclpy.node import Node
@@ -30,16 +32,21 @@ class ImuNode(Node):
 def main(args=None):
     rclpy.init(args=args)
     node = ImuNode()
-    executor = EventsExecutor()
-    executor.add_node(node)
+    executor = None
 
     try:
-        executor.spin()
+        if os.environ.get('EVENT_EXECUTOR') == '1':
+            executor = EventsExecutor()
+            executor.add_node(node)
+            executor.spin()
+        else:
+            rclpy.spin(node)
     finally:
-        executor.shutdown()
+        if executor is not None:
+            executor.shutdown()
         node.destroy_node()
-        rclpy.shutdown()
-
+        if rclpy.ok():
+            rclpy.shutdown()
 
 if __name__ == '__main__':
     main()

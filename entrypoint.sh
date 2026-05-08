@@ -5,6 +5,7 @@
 # Docker image, but works on any host with ROS 2 Jazzy + perf.
 
 export LC_ALL=C
+export EVENT_EXECUTOR="${EVENT_EXECUTOR:-1}"
 
 WS="${WS:-/ros2_ws}"
 PERF_DURATION="${PERF_DURATION:-10}"
