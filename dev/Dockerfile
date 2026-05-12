@@ -1,9 +1,5 @@
 FROM ubuntu:24.04
 
-ARG USER_UID=1000
-ARG USER_GID=1000
-ARG VIDEO_GID=44
-ARG USER_NAME=dev
 ARG DIR_NAME=project
 ENV DEBIAN_FRONTEND=noninteractive \
     LANG=en_US.UTF-8 \
@@ -11,7 +7,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     ROS_DISTRO=jazzy
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    sudo build-essential cmake git git-lfs openssh-client \
+    build-essential cmake git git-lfs openssh-client \
     nano vim less tree htop tmux curl wget zip unzip \
     libglib2.0-0 libgl1 libegl1 \
     locales gnupg2 lsb-release ca-certificates software-properties-common \
@@ -20,48 +16,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
  && update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8 \
  && add-apt-repository universe \
  && rm -rf /var/lib/apt/lists/*
-
-# --- create the user (handle primary group GID collisions) ---
-RUN set -eux; \
-  PRIMARY_GID="${USER_GID}"; \
-  EXISTING_USER="$(getent passwd "${USER_UID}" | cut -d: -f1 || true)"; \
-  if [ -n "${EXISTING_USER}" ]; then \
-    echo "UID ${USER_UID} already used by user: ${EXISTING_USER}; reusing it as ${USER_NAME}."; \
-    if [ "${EXISTING_USER}" != "${USER_NAME}" ]; then \
-      usermod -l "${USER_NAME}" -d "/home/${USER_NAME}" -m "${EXISTING_USER}"; \
-    fi; \
-    usermod -aG sudo "${USER_NAME}"; \
-  else \
-    PRIMARY_G="$(getent group "${PRIMARY_GID}" | cut -d: -f1 || true)"; \
-    if [ -n "${PRIMARY_G}" ]; then \
-      echo "Using existing group ${PRIMARY_G} (GID ${PRIMARY_GID}) for ${USER_NAME}"; \
-      useradd -m -u "${USER_UID}" -g "${PRIMARY_GID}" -G sudo -s /bin/bash "${USER_NAME}"; \
-    else \
-      echo "Creating group ${USER_NAME} with GID ${PRIMARY_GID}"; \
-      groupadd -g "${PRIMARY_GID}" "${USER_NAME}"; \
-      useradd -m -u "${USER_UID}" -g "${PRIMARY_GID}" -G sudo -s /bin/bash "${USER_NAME}"; \
-    fi; \
-  fi; \
-  echo "%sudo ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/nopasswd; \
-  chmod 0440 /etc/sudoers.d/nopasswd
-
-# --- ensure container user is in the host's VIDEO_GID ---
-RUN set -eux; \
-  TARGET_GID="${VIDEO_GID}"; \
-  EXIST_G="$(getent group "${TARGET_GID}" | cut -d: -f1 || true)"; \
-  if [ -n "${EXIST_G}" ]; then \
-    echo "GID ${TARGET_GID} already used by group: ${EXIST_G}; adding ${USER_NAME} to it."; \
-    usermod -aG "${EXIST_G}" "${USER_NAME}"; \
-  else \
-    if getent group video >/dev/null; then \
-      echo "Setting 'video' group to GID ${TARGET_GID}"; \
-      groupmod -g "${TARGET_GID}" video; \
-    else \
-      echo "Creating 'video' group with GID ${TARGET_GID}"; \
-      groupadd -g "${TARGET_GID}" video; \
-    fi; \
-    usermod -aG video "${USER_NAME}"; \
-  fi
 
 
 # ros2
@@ -100,7 +54,6 @@ RUN apt-get update \
  && rosdep install --from-paths src --ignore-src -r -y --rosdistro=${ROS_DISTRO} \
  && rm -rf /var/lib/apt/lists/*
 
-RUN echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
 
 RUN /bin/bash -c "source /opt/ros/${ROS_DISTRO}/setup.bash \
                   && colcon build \
@@ -112,4 +65,3 @@ COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
-USER ${USER_NAME}

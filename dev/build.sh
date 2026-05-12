@@ -10,13 +10,8 @@ DIR_NAME="$(echo "${DIR_NAME_RAW}" | tr '[:upper:]' '[:lower:]')"  # for image t
 IMAGE_NAME="${IMAGE_NAME:-${DIR_NAME}-dev}"
 DOCKERFILE="${DOCKERFILE:-${SCRIPT_DIR}/Dockerfile}"
 
-USER_UID="$(id -u)"
-USER_GID="$(id -g)"
-VIDEO_GID="$(getent group video | cut -d: -f3 || echo 44)"
-USER_NAME="$(id -un)"
-
 echo "Building ${IMAGE_NAME} with:"
-echo "  USER_UID=${USER_UID} USER_GID=${USER_GID} VIDEO_GID=${VIDEO_GID} USER_NAME=${USER_NAME} DIR_NAME=${DIR_NAME_RAW}"
+echo "  DIR_NAME=${DIR_NAME_RAW}"
 
 if [ -f "${PROJECT_DIR}/.gitmodules" ]; then
   echo "Updating git submodules for Docker build context ..."
@@ -24,10 +19,6 @@ if [ -f "${PROJECT_DIR}/.gitmodules" ]; then
 fi
 
 docker build -t "${IMAGE_NAME}" \
-  --build-arg USER_UID="${USER_UID}" \
-  --build-arg USER_GID="${USER_GID}" \
-  --build-arg VIDEO_GID="${VIDEO_GID}" \
-  --build-arg USER_NAME="${USER_NAME}" \
   --build-arg DIR_NAME="${DIR_NAME_RAW}" \
   -f "${DOCKERFILE}" "${PROJECT_DIR}"
 
