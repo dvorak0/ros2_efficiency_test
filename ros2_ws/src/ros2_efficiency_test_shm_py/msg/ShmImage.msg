@@ -1,0 +1,10 @@
+std_msgs/Header header
+string shm_name
+uint64 offset
+uint32 size
+uint32 width
+uint32 height
+uint32 step
+string encoding
+uint32 slot_index
+uint64 seq

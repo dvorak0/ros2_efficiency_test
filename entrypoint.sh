@@ -142,8 +142,9 @@ run_test() {
     sleep 2
 }
 
-run_test "cpp" "ros2_efficiency_test"    "efficiency_test.launch.py"    "pidof"
-run_test "py"  "ros2_efficiency_test_py" "efficiency_test_py.launch.py" "pgrep"
+run_test "cpp"    "ros2_efficiency_test"        "efficiency_test.launch.py"       "pidof"
+run_test "py"     "ros2_efficiency_test_py"     "efficiency_test_py.launch.py"    "pgrep"
+run_test "shm_py" "ros2_efficiency_test_shm_py" "efficiency_test_shm_py.launch.py" "pgrep"
 
 echo
 echo "================================================================"
@@ -151,7 +152,7 @@ echo "  CPU utilization summary  (% of one CPU, ${PERF_DURATION}s window)"
 echo "================================================================"
 printf "%-8s  %-18s  %10s\n" "package" "node" "cpu"
 printf "%-8s  %-18s  %10s\n" "--------" "------------------" "----------"
-for label in cpp py; do
+for label in cpp py shm_py; do
     for node in "${NODES[@]}" all; do
         printf "%-8s  %-18s  %10s\n" \
             "${label}" "${node}" "${RESULTS[${label}|${node}]:-n/a}"

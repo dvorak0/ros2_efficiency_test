@@ -104,7 +104,7 @@ RUN echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
 
 RUN /bin/bash -c "source /opt/ros/${ROS_DISTRO}/setup.bash \
                   && colcon build \
-                       --packages-select shm_msgs ros2_efficiency_test ros2_efficiency_test_py \
+                       --packages-select shm_msgs ros2_efficiency_test ros2_efficiency_test_py ros2_efficiency_test_shm_py \
                        --cmake-args -DCMAKE_BUILD_TYPE=Release"
 
 # Drop in the runner script.
