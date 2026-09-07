@@ -1,0 +1,84 @@
+name: Build Docker Image (multi)
+
+on:
+  push:
+    branches: [docker]
+  workflow_dispatch:
+
+env:
+  IMAGE_NAME: uniflexai/ros2_efficiency_test
+  DOCKER_BUILDKIT: 1
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            platform: linux/amd64
+            runner: ubuntu-22.04
+          - arch: arm64
+            platform: linux/arm64
+            runner: ubuntu-22.04-arm
+    runs-on: ${{ matrix.runner }}
+
+    steps:
+      - name: Free disk space
+        uses: insightsengineering/disk-space-reclaimer@v1
+        with:
+          android: true
+          dotnet: true
+          haskell: true
+          docker-images: true
+          swap-storage: true
+          tools-cache: true
+          large-packages: true
+
+      - uses: actions/checkout@v4
+
+      - name: Initialize submodules
+        run: git submodule update --init --recursive
+
+      - run: echo "SHORT_SHA=${GITHUB_SHA::8}" >> "$GITHUB_ENV"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: dev/Dockerfile
+          platforms: ${{ matrix.platform }}
+          push: true
+          tags: ${{ env.IMAGE_NAME }}:${{ env.SHORT_SHA }}-${{ matrix.arch }}
+          cache-from: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache-${{ matrix.arch }}
+          cache-to: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache-${{ matrix.arch }},mode=max
+
+  merge-manifest:
+    runs-on: ubuntu-22.04
+    needs: build
+
+    steps:
+      - run: echo "SHORT_SHA=${GITHUB_SHA::8}" >> "$GITHUB_ENV"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Create and push multi-arch manifest
+        run: |
+          docker buildx imagetools create \
+            --tag "$IMAGE_NAME:${SHORT_SHA}" \
+            --tag "$IMAGE_NAME:latest" \
+            "$IMAGE_NAME:${SHORT_SHA}-amd64" \
+            "$IMAGE_NAME:${SHORT_SHA}-arm64"
