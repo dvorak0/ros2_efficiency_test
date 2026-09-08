@@ -27,12 +27,7 @@ RUN echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/r
 RUN apt-get update && apt-get install -y \
     ros-${ROS_DISTRO}-ros-base \
     ros-${ROS_DISTRO}-rmw-cyclonedds-cpp \
-    ros-${ROS_DISTRO}-cv-bridge \
     ros-${ROS_DISTRO}-rmw-fastrtps-cpp \
-    ros-${ROS_DISTRO}-iceoryx-posh \
-    ros-${ROS_DISTRO}-iceoryx-binding-c \
-    ros-${ROS_DISTRO}-iceoryx-hoofs \
-    ros-${ROS_DISTRO}-pcl-conversions \
     python3-colcon-common-extensions \
     ros-${ROS_DISTRO}-ament-cmake-target-dependencies \
     python3-rosdep \
